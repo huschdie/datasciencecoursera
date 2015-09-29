@@ -1,0 +1,107 @@
+---
+title: "Project Machine Learning Coursera"
+output: html_document
+---
+```{r, echo=FALSE}
+load("C:/Users/ilja/Desktop/Coursera/MaLe/hw3/hw_3.R.RData")
+library(lattice);library(ggplot2);library(caret);library(nnet)
+```
+Aim: Predict the way the exercise was performed.
+
+First of all check the problem set and choose the features. 
+
+Initial features of the 20 problem sets:
+
+```{r}
+nrow(tests); ncol(tests)
+```
+
+Take only numeric features into account and also only those that have not-NA values for at least 10 problem cases.
+Furthermore, get rid of date features and ranking of the sample.
+Hence, 53 features are left.
+
+Readjust the training set, so that a 19,622 by 54 dataframe is left.
+```{r}
+nrow(data); ncol(data)
+```
+Split the training dataset in training (50% of data), testing (25%) and cross validation (25%).
+```{r}
+set.seed(25)
+```
+Running various models on the training set to train the algorithm. As next step compare the out-of-sample accuracies of the different algorithms on the crossvalidation data sets. Out-of-sample accuracy is expected to be (slightly) lower then the in-sample-accuracy on the training set. Eventually validate the best model on the testing set.
+
+Since it's a classification problem, I tried the following models:
+
+
+1) Multinomial model - scaled and centered 
+----------------------------------
+`train(training$data.classe ~.,method = "multinom", preProcess =  c("center", "scale"),data = training)`
+```{r, echo=FALSE}
+confusionMatrix(cv$data.classe,predict(modelMN3,cv))$overall
+confusionMatrix(cv$data.classe,predict(modelMN3,cv))$table
+```
+So the general accuracy is around 74% on the crossvalidation dataset and with p-value far below 1% the model seems to be reasonably good predictor.
+The insample accuracy on the training data is slightly higher with over 75%.
+```{r, echo=FALSE}
+confusionMatrix(training$data.classe,predict(modelMN3,training))$overall[1]
+```
+
+
+2) Multinominal model using PCA
+-----------------------------------
+`train(training$data.classe ~.,method = "multinom", preProcess = "pca",data = training)`
+```{r, echo=FALSE}
+confusionMatrix(cv$data.classe,predict(modelMN0,cv))$overall
+confusionMatrix(cv$data.classe,predict(modelMN0,cv))$table
+```
+This model seems far less reliable with overall accuracy of around 55% on the crossvalidation dataset. However, also this model is highly significant.
+The insample accuracy is slightly higher with around 56%.
+```{r, echo=FALSE}
+confusionMatrix(training$data.classe,predict(modelMN0,training))$overall[1]
+```
+
+
+3) Naive Bayes
+----------------------------
+`train(training$data.classe ~.,data=training, method = "nb")`
+```{r, echo=FALSE,warning=F,message=F}
+a <-confusionMatrix(cv$data.classe,predict(modelNB5,cv))
+a$overall
+a$table
+```
+The Naive Bayes returns around 75% correct predictions on the crossvalidation data set. Hence it's equally good as the standardised multinomial model. 
+The insample accuracy is slightly higher with over 76%.
+```{r, echo=FALSE,warning=F}
+confusionMatrix(training$data.classe,predict(modelNB5,training))$overall[1]
+```
+
+
+4) Random Forest
+---------------------------------------------
+`train(training$data.classe ~.,data=training, method = "rf",prox=TRUE,number = 4)`
+```{r, echo=FALSE}
+b <-confusionMatrix(cv$data.classe,predict(modelRF6,cv))
+b$overall
+b$table
+```
+
+Random forest seems to be by far the best model regarding its fit on the cross validation data set with over 99% accuracy. There are almost no mistakes on the predicted vs real values. The insample accuracy is exactly 100% for all 9810 observations in the training data.
+```{r, echo=FALSE}
+confusionMatrix(training$data.classe,predict(modelRF6,training))$overall[1]
+```
+
+Model Selection
+--------------------------
+Based on the crossvalidation results, we would choose the *Random Forest* model as the best prediction model. The final dicision is to be supported by the model fit on the testing data, the final 25% of the initial training data.
+
+```{r, echo=FALSE}
+c <-confusionMatrix(testing$data.classe,predict(modelRF6,testing))
+c$overall
+c$table
+```
+
+Also in this case, the out of sample accuracy of 99.7 % is a clear indicator that the random forest algorithm is a great fit for this data.
+
+The final decision is hence to rely on only one algorithm since all the testing results were more then persuading.
+
+
